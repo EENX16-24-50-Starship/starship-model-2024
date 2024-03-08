@@ -21,23 +21,23 @@
 // Adjustable program parameters
 int sHigh = 1150;         // Top speed of the motor tests
 int duration = 2000;      // Duration: how long the top speed will be maintained
-int speedLimit = 1170;    // Adjusts the maximum allowed speed during testing
+int speedLimit = 1150;    // Adjusts the maximum allowed speed during testing
 
 // Declare ESC
 Servo dc_motor_1;
 Servo dc_motor_2;
 
 // Pin assignment
-int dc_motor_1_pin = 4;
-int dc_motor_2_pin = 5;
-int buttonPin = 14;
-int potPin = PIN_A0;
+int dc_motor_1_pin = 4;   // D2
+int dc_motor_2_pin = 5;   // D1
+int buttonPin = 14;       // D5
+int potPin = PIN_A0;      // A0
 
 // Global variable declaration
 int t0 = 0;
 int tPress = 0;
 bool calibrated = false;
-bool pot = true;          // <<<<-------- Change this depending on usage of potentiometer or not
+bool pot = false;          // <<<<-------- Change this depending on usage of potentiometer or not
 int potVal = 0;
 
 
@@ -105,6 +105,8 @@ void escCalibration() {
   // Limit thrust range for safety
   dc_motor_1.attach(dc_motor_1_pin, 1100, speedLimit);
   dc_motor_2.attach(dc_motor_2_pin, 1100, speedLimit);
+  dc_motor_1.write(1100); 
+  dc_motor_2.write(1100);                           
 }
 
 void motorTest(int lo, int high, int duration, int tUp, int tDown) {
@@ -136,6 +138,9 @@ void setup() {
   // Configure pins
   dc_motor_1.attach(dc_motor_1_pin, 1100, 1940);
   dc_motor_2.attach(dc_motor_2_pin, 1100, 1940);
+  dc_motor_1.write(1100); 
+  dc_motor_2.write(1100);                           
+
   pinMode(buttonPin, INPUT_PULLUP);
 }
 

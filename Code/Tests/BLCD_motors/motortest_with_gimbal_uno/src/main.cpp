@@ -1,4 +1,4 @@
-// BLDC motor test (3.3 V esp8266)
+// BLDC motor test with gimbal(3.3 V esp8266)
 // -----------------------------
 // Created by Gunnar Edman
 
@@ -20,18 +20,32 @@
 
 // Adjustable program parameters
 int sHigh = 1170;         // Top speed of the motor tests
-int duration = 2000;      // Duration: how long the top speed will be maintained
+int duration = 4000;      // Duration: how long the top speed will be maintained
 int speedLimit = 1170;    // Adjusts the maximum allowed speed during testing
+int gimb1 = 1000;
+int gimb2 = 2000;
+int gimb3 = 3000;
+int gimb4 = 4000;
+int gimb5 = 5000;
 
 // Declare ESC
 Servo dc_motor_1;
 Servo dc_motor_2;
+Servo servo1;
+Servo servo2;
 
 // Pin assignment
-int dc_motor_1_pin = 4;   // D2
-int dc_motor_2_pin = 5;   // D1
-int buttonPin = 14;       // D5
+int dc_motor_1_pin = 5;   // D2
+int dc_motor_2_pin = 6;   // D1
+int buttonPin = 2;       // D6
 int potPin = PIN_A0;      // A0
+int ledPin = 2;
+
+// Servos
+int servoPin1 = 9;    // D2
+int servoPin2 = 11;    // D1
+int servo1Home = 82;      // degrees
+int servo2Home = 107; // 88;      // degrees
 
 // Global variable declaration
 int t0 = 0;
@@ -40,11 +54,19 @@ bool calibrated = false;
 bool pot = false;          // <<<<-------- Change this depending on usage of potentiometer or not
 int potVal = 0;
 
+// Servo variables
+int pos = 0;    // variable to store the servo position
+
+// Servo functions
+void setServoPos(int p) {
+  servo1.write(servo1Home + p*1.5);
+  servo2.write(servo2Home + p*1.5);
+}
 
 // Functions---------------------------
 void motorsWrite(int s) {
   // For safty, set speed to zero and shut down if button is pressed
-  if(digitalRead(buttonPin)) {
+  if(!digitalRead(buttonPin)) {
     dc_motor_1.write(1100);
     dc_motor_2.write(1100);  
     delay(10000);
@@ -59,7 +81,7 @@ void motorsWrite(int s) {
 }
 
 void abortCheck() {
-  if(digitalRead(buttonPin)) {
+  if(!digitalRead(buttonPin)) {
     dc_motor_1.write(1100);
     dc_motor_2.write(1100);  
     delay(10000);
@@ -93,7 +115,7 @@ void escCalibration() {
   // Max throttle for 5 seconds
   dc_motor_1.write(1940);
   dc_motor_2.write(1940);
-  delay(5000);                                    
+  delay(6000);
 
   // Zero throttle for 3 seconds
   dc_motor_1.write(1100); 
@@ -114,11 +136,43 @@ void motorTest(int lo, int high, int duration, int tUp, int tDown) {
   // -------------------------------------------------------
   rampUp(lo, high, tUp);
 
-  // Maintain max-speed for 2 seconds while checking abort button
+  // Maintain max-speed for duration seconds while checking abort button
   int t1 = millis(); 
   int t2 = millis();
   while(t2-t1 < duration) {
     abortCheck();
+    t2 = millis();
+  }
+
+  // Down ramp
+  rampDown(lo, high, tDown);
+
+  // Set motor speed to zero
+  motorsWrite(1100);
+  delay (2000);
+}
+
+void motorGimbalTest(int lo, int high, int duration, int tUp, int tDown) {
+  // Thrust range 0 to 100 [%] = 1100 to 1940 [microseconds]
+  // -------------------------------------------------------
+  rampUp(lo, high, tUp);
+
+  // Maintain max-speed for "duration" seconds while checking abort button
+  int t1 = millis(); 
+  int t2 = millis();
+  while (t2-t1 < duration) {
+    abortCheck();
+    int tStamp = t2-t1;
+
+    // Perform gimbal at predefined time stamps
+    if (tStamp >= gimb1-20 && tStamp <= gimb1+20) {
+      setServoPos(-20);
+    }
+
+    else if (tStamp >= gimb2-20 && tStamp <= gimb2+20) {
+      setServoPos(-20);
+    }
+
     t2 = millis();
   }
 
@@ -141,18 +195,24 @@ void setup() {
   dc_motor_1.write(1100); 
   dc_motor_2.write(1100);                           
 
+  servo1.attach(servoPin1, 900, 2100);
+  servo2.attach(servoPin2, 900, 2100);
+
   pinMode(buttonPin, INPUT_PULLUP);
+  setServoPos(20);
 }
 
 void loop() {
   // Only execute this code if the ESC is in calibration mode (never in armed mode)
+
+
   if (!calibrated) {
     // Check for button press and duration off press
     t0 = millis();
-    while(digitalRead(buttonPin)) { 
+    while (!digitalRead(buttonPin)) { 
       tPress = millis();
 
-      if(tPress-t0 >= 1000) {
+      if (tPress-t0 >= 1000) {
         escCalibration();
       }
     }
@@ -160,22 +220,27 @@ void loop() {
 
   // Test code that runs after throttle signal calibration  
   else {
+    setServoPos(45);
+    delay(1000); 
+    setServoPos(-45);
+    delay(1000);
+
     // Run pre-programmed speed test
-    if(!pot) {
-      // Set motor speed to zero
-      dc_motor_1.write(1100);
-      dc_motor_2.write(1100);
+  //   if(!pot) {
+  //     // Set motor speed to zero
+  //     dc_motor_1.write(1100);
+  //     dc_motor_2.write(1100);
 
-      // 0-speed, top speed, duration time, tUp, tDown
-      motorTest(1100, sHigh, duration, 1000, 1000);
-      delay(20000);
-      exit(0);  
-    }
+  //     // 0-speed, top speed, duration time, tUp, tDown
+  //     motorTest(1100, sHigh, duration, 1000, 1000);
+  //     delay(20000);
+  //     exit(0);  
+  //   }
 
-    // Copuple motor speed to potentiometer
-    else {
-      potVal = map(analogRead(potPin), 0, 1023, 1100, 1940);
-      motorsWrite(potVal);
-    }
+  //   // Copuple motor speed to potentiometer
+  //   else {
+  //     potVal = map(analogRead(potPin), 0, 1023, 1100, 1940);
+  //     motorsWrite(potVal);
+  //   }
   }
 }

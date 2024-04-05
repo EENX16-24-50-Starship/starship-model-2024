@@ -16,7 +16,8 @@
 #include "ICM20600.h"
 #include <Wire.h>
 #include "AK09918.h"
-// #include <SimpleFOC.h>
+#include <SimpleFOC.h>
+#include <servo.h>
 
 
 //Initialize components----------------------------------------------------------------------------------------------------
@@ -25,12 +26,33 @@ AK09918_err_type_t err;
 AK09918 ak09918;
 
 //Global variables---------------------------------------------------------------------------------------------------------
+// Servo parameters
+Servo servo1;  // create servo object to control a servo
+Servo servo2;  // create servo object to control a servo
+int servoPin1 = 9; 
+int servoPin2 = 11;
+
+// Servo calibration and demo rotation range
+int gimbalRange = 33;     // +/- degrees of movement in demo
+int servo1Home = 83;      // degrees
+int servo2Home = 90;//88;      // degrees
+int servoUpdateRate = 20; // ms
+int s1Gimb = servo1Home;
+int s2Gimb = servo2Home;
+int s1GimbPrev = servo1Home;
+int s2GimbPrev = servo2Home;
+int servoFilterB = 0.5;             // <<<<<<<<<<<<----------------------------------------------------Servo filter constant, tweak this to adjust for speed vs jitter
+
+float t0 = 0;
+float servoUpdate = 0;
+
+
 // Program parameter settings
 int baudrate = 500000; //115200;
 double declination_shenzhen = 4.95; //4.78;      //From http://www.magnetic-declination.com/
 int freq = 2000;
-int calibrationCount = 20000;
-int warmupTime = 5000;
+int calibrationCount = 2000; // 100000
+int warmupTime = 100; // 10000
 // const float sensorRate = 100; //25.00; //[Hz]    // <<<<<<<-----------------------------------------------------Adjust this sensor update freq.
 
 //General stuff
@@ -39,7 +61,7 @@ unsigned long prev_time;
 unsigned long start_time, current_time, tPrint;
 
 //Filter parameters - Defaults tuned for 2kHz loop rate; Do not touch unless you know what you are doing:
-float B_madgwick = 0.04;  //Madgwick filter parameter (tuned for MPU MPU6050 or MPU9250)
+float B_madgwick = 0.04;  //Madgwick filter parameter
 float B_accel = 0.14;     //Accelerometer LP filter paramter, (MPU6050 default: 0.14. MPU9250 default: 0.2)
 float B_gyro = 0.1;       //Gyro LP filter paramter, (MPU6050 default: 0.1. MPU9250 default: 0.17)
 float B_mag = 1.0;        //Magnetometer LP filter parameter
@@ -95,26 +117,6 @@ void loopRate(int freq) {
     checker = micros();
   }
 }
-
-// void loopBlink() {
-//   //DESCRIPTION: Blink LED on board to indicate main loop is running
-//   /*
-//    * It looks cool.
-//    */
-//   if (current_time - blink_counter > blink_delay) {
-//     blink_counter = micros();
-//     digitalWrite(13, blinkAlternate); //Pin 13 is built in LED
-    
-//     if (blinkAlternate == 1) {
-//       blinkAlternate = 0;
-//       blink_delay = 100000;
-//       }
-//     else if (blinkAlternate == 0) {
-//       blinkAlternate = 1;
-//       blink_delay = 2000000;
-//       }
-//   }
-// }
 
 // Calibration
 // Mangetometer calibration (from IMU library)
@@ -490,7 +492,7 @@ void calibrateAttitude() {
    * to boot. 
    */
   //Warm up IMU and madgwick filter in simulated main loop
-  for (int i = 0; i <= 10000; i++) {
+  for (int i = 0; i <= warmupTime; i++) {
     prev_time = current_time;      
     current_time = micros();      
     dt = (current_time - prev_time)/1000000.0; 
@@ -500,20 +502,37 @@ void calibrateAttitude() {
   }
 }
 
+void sweep2() {
+  int del = 800;
+
+  servo1.write(servo1Home);
+  servo2.write(servo2Home);
+  delay(1000);
+  
+  servo1.write(servo1Home - gimbalRange);
+  servo2.write(servo2Home - gimbalRange);
+  delay(del);
+
+  servo1.write(servo1Home + gimbalRange);
+  servo2.write(servo2Home + gimbalRange);
+  delay(del); 
+
+  servo1.write(servo1Home);
+  servo2.write(servo2Home);
+  delay(2000);
+}
 
 // Setup---------------------------------------------------------
 void setup() {
-  // Inits
   start_time = millis();
-  Serial.begin(250000); //USB serial
-  while (!Serial) {
-    ;
-  }
-  
-  delay(500);
   Wire.begin();
-  // filter.begin(sensorRate);
-  
+  Serial.begin(115200);
+
+  // Servo setup
+  servo1.attach(servoPin1, 500, 2500);
+  servo2.attach(servoPin2, 900, 2100);
+  sweep2();
+
   // Sensor setup
   err = ak09918.initialize();
   ak09918.switchMode(AK09918_POWER_DOWN);
@@ -542,12 +561,18 @@ void setup() {
   Serial.print('\n');
   // Filter / IMU reading warmup
   calibrateAttitude(); // Simulates a main loop for a few seconds (to get the madgwick filter to converge before the main loop)
+
+  // Calibration done
+  Serial.print("Calibration done!!!");
+  sweep2();
+  t0 = millis();
+  servoUpdate = millis();
 }
 
 
 // Main loop--------------------------------------------------
 void loop() {
-  //Keep track of what time it is and how much time has elapsed since the last loop
+    //Keep track of what time it is and how much time has elapsed since the last loop
   prev_time = current_time;      
   current_time = micros();      
   dt = (current_time - prev_time)/1000000.0;
@@ -556,8 +581,7 @@ void loop() {
 
   getIMUdata(); //Pulls raw gyro, accelerometer, and magnetometer data from IMU and LP filters to remove noise
 
-  // Estimate states with madgwick filter
-  // Feed Gyro-data in units of dps (degrees per second)
+  // Estimate states with madgwick filter  
   Madgwick(GyroX, -GyroY, -GyroZ, -AccX, AccY, AccZ, MagY, -MagX, MagZ, dt); //Updates roll_IMU, pitch_IMU, and yaw_IMU angle estimates (degrees)
 
   
@@ -575,6 +599,40 @@ void loop() {
 
   Serial.print(yaw_IMU);
   Serial.print('\n');
+
+  // Servo demo
+  // sweep2();
+
+  // Update servo control angles with 50 Hz
+  // ---------------------------
+
+  // if (millis() - t0 >= 10000) {
+  //   float t1 = millis();
+  //   while (millis() - t1 < 10000) {
+  //     sweep2();
+  //   }
+  //   t1 = millis();
+  //   t0 = millis();
+  // }
+
+  if (millis() - servoUpdate >= servoUpdateRate) {
+    servoUpdate = millis();
+    // Adding
+    s1Gimb = servo1Home + roll_IMU;
+    s2Gimb = servo2Home - pitch_IMU*1.5;              // <<<<<<<<<<<<<<---------------------------------------------Adjust sign of this addition for gimbal direction
+
+    // LP filter to reduce servo jitter
+    // AccX = (1.0 - B_accel)*AccX_prev + B_accel*AccX;
+    // s1Gimb = (1.0 - servoFilterB)*s1GimbPrev + servoFilterB*s1Gimb;
+    // s2Gimb = (1.0 - servoFilterB)*s2GimbPrev + servoFilterB*s1Gimb;
+    // s1GimbPrev = s1Gimb;s
+    // s2GimbPrev = s2Gimb;
+
+    servo1.write(s1Gimb);
+    servo2.write(s2Gimb);
+    }
+
+    servoUpdate = 0;
 
   // Regulate looprate to predefined loop frequency (the teeensy runs much faster then what is suitable for this)
   loopRate(freq);

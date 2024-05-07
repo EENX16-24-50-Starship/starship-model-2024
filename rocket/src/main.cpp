@@ -26,6 +26,7 @@
 #include "LQR.h"
 #include <SD.h>
 #include "RollControl.h"
+#include <Bitcraze_PMW3901.h>
 
 
 
@@ -62,6 +63,9 @@ Imu6DOF imu;
 
 // ========= Lidar =========
 TFMPI2C tfmP;         // Create a TFMini-Plus I2C object
+
+// ========= Optical Flow ===========
+Bitcraze_PMW3901 pmw3901(OF_CS_PIN);
 
 // Variables storing data from TFmini plus
 float zMeter = 0;
@@ -236,6 +240,32 @@ void write2SD(){
   }
 }
 
+void initOpticalFlow(){
+  // Initialize the optical flow sensor
+  if (!pmw3901.begin()) {
+    #ifdef DEBUG
+       Serial.println("Failed to initialize the optical flow sensor. Check the wiring and try again.");
+     #endif
+  }
+}
+
+void getFlowData(){
+  int16_t deltaX, deltaY;
+  
+  /* Get delta values from PMW3901 */
+  pmw3901.readMotionCount(&deltaX, &deltaY);
+  // Store
+  xDot = deltaX;
+  yDot = deltaY;
+
+  #ifdef DEBUG
+    Serial.print("DeltaX: ");
+    Serial.print(deltaX);
+    Serial.print("  DeltaY: ");
+    Serial.println(deltaY);
+  #endif
+}
+
 void redLedWarning() {
   for (int i=0; i<BLINK_COUNT; i++) {
     digitalWrite(RED_LED_PIN, HIGH);
@@ -350,6 +380,9 @@ void setup() {
   // motorTest();
 
   lqrInit();
+
+  // Initialize Optical Flow
+  initOpticalFlow();
 
   // Initialize the SD card
   initSD();
@@ -527,8 +560,10 @@ void loop() {
 
   // Preliminary, rough estimations of the missing states
   // To-do (kalman estimator)
-  xDot = (imu.AccX + imu.AccX_prev) * imu.dt;
-  yDot = (imu.AccY + imu.AccY_prev) * imu.dt;
+  //xDot = (imu.AccX + imu.AccX_prev) * imu.dt;
+  //yDot = (imu.AccY + imu.AccY_prev) * imu.dt;
+  // Get aand set delta values for X and Y
+  getFlowData();
 
 
   // Get lidar data (100 Hz)

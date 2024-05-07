@@ -26,6 +26,7 @@
 #define ALT_REF 1
 
 
+
 // =============================================================================================
 //  Pin assignments 
 // =============================================================================================
@@ -42,6 +43,9 @@
 // Define the pins used for the nRF24L01 transceiver module (CE, CSN)
 #define CE_PIN 9    //9 teensy, 2 arduino uno (lighter color)
 #define CSN_PIN 10  //10 teensy, 4 arduino uno (lighter color)
+
+// // ====== Optical Flow pin assignment ======
+#define OF_CS_PIN 0 //SPI1
 
 
 

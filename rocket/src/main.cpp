@@ -298,14 +298,15 @@ void getFlowData(){
   pmw3901.readMotionCount(&deltaX, &deltaY);
   
   // Convert from [rad/s] to [m/s] and store
+  zMeter = 1.0;
   xDot = float(deltaX) * zMeter;
   yDot = float(deltaY) * zMeter;
 
   #ifdef DEBUG
-    Serial.print("\nDeltaX: ");
-    Serial.print(deltaX);
-    Serial.print("  DeltaY: ");
-    Serial.print(deltaY);
+    Serial.print("\nxDot: ");
+    Serial.print(xDot);
+    Serial.print("\tyDot: ");
+    Serial.print(yDot);
   #endif
 }
 
@@ -424,7 +425,7 @@ void setup() {
   initOpticalFlow();
 
   // Initialize the SD card
-  initSD();
+  // initSD();
 
 
   // =============== Sensor setup ===============
@@ -545,7 +546,7 @@ void loop() {
     ackData.armSwitch = false;
     digitalWrite(RED_LED_PIN, LOW);
 
-    write2SD();
+    // write2SD();
 
     // Print largest deltaT in main loop
     Serial.print("\n\n\n =================================== \n Biggest delta T (bellow 10 ms): ");
@@ -633,8 +634,9 @@ void loop() {
     unsigned long t1Lid = micros();
 
 
-    Serial.print("\tOptical flow sample took: ");
+    Serial.print("\tFlow sample time: ");
     Serial.print(t1Lid - t0Lid);
+    Serial.print(" [us]");
     
     // Reset timer
     t0Lidar = micros();
@@ -658,14 +660,16 @@ void loop() {
     // getLidar();
 
     #ifdef DEBUG
-      Serial.print("\nz = ");
+      Serial.print("\tz = ");
       Serial.print(zMeter);
 
       Serial.print("\t");
-      Serial.print("(Xr, Yr): ");
+      Serial.print("(Xr, Yr, Zr): ");
       Serial.print(imu.roll_IMU);
       Serial.print("  ");
       Serial.print(imu.pitch_IMU);
+      Serial.print("  ");
+      Serial.print(imu.yaw_IMU);
       Serial.print("  ");
     #endif
 
@@ -692,20 +696,20 @@ void loop() {
     yGimb = lqrSignals.gimb2;
     
     #ifdef DEBUG
-      Serial.print("  g1: ");
-      Serial.print(xGimb);
-      Serial.print("  g2: ");
-      Serial.print(yGimb);
+      // Serial.print("  g1: ");
+      // Serial.print(xGimb);
+      // Serial.print("  g2: ");
+      // Serial.print(yGimb);
 
-      Serial.print("   PWM: ");
-      Serial.print(lqrSignals.motor1Speed);
-      Serial.print("\t ");
-      // Serial.print("t: ");
-      // Serial.print(currentTime);
-      Serial.print("   dt: ");
-      Serial.print(t1Lqr - t0Lqr);
-      Serial.print("   dt Madgwick: ");
-      Serial.print(imu.dt);
+      // Serial.print("   PWM: ");
+      // Serial.print(lqrSignals.motor1Speed);
+      // Serial.print("\t ");
+      // // Serial.print("t: ");
+      // // Serial.print(currentTime);
+      // Serial.print("   dt: ");
+      // Serial.print(t1Lqr - t0Lqr);
+      // Serial.print("   dt Madgwick: ");
+      // Serial.print(imu.dt);
       
     #endif
 
@@ -744,7 +748,7 @@ void loop() {
     senderData.gimb2 = yGimb;
 
     // Log to SD-card at CONTROLLER_FREQUENCY [Hz]
-    write2SD();
+    // write2SD();
 
     t0Lqr = micros();
     t1Lqr = micros();

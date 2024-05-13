@@ -168,17 +168,17 @@ void lqr(float x_dot, float gamma1, float gamma1_dot, float y_dot, float gamma2,
     float F = float(U(0)) + 2.5 * 9.82;
     
     #ifdef DEBUG
-        Serial.print("  zDot: ");
-        Serial.print(z_dot);
-        Serial.print("  zDotRef: ");
-        Serial.print(zdotref[counter]); //zdotref[counter]);
-        Serial.print("  ");
+        // Serial.print("  zDot: ");
+        // Serial.print(z_dot);
+        // Serial.print("  zDotRef: ");
+        // Serial.print(zdotref[counter]); //zdotref[counter]);
+        // Serial.print("  ");
 
-        Serial.print("\t zref: ");
-        Serial.print(tradj_ref(6));//zref[counter]);
-        Serial.print("  F: ");
-        Serial.print(F);
-        Serial.print("   ");
+        // Serial.print("\t zref: ");
+        // Serial.print(tradj_ref(6));//zref[counter]);
+        // Serial.print("  F: ");
+        // Serial.print(F);
+        // Serial.print("   ");
     #endif
 
 

@@ -296,15 +296,16 @@ void getFlowData(){
   
   /* Get delta values from PMW3901 */
   pmw3901.readMotionCount(&deltaX, &deltaY);
-  // Store
-  xDot = deltaX;
-  yDot = deltaY;
+  
+  // Convert from [rad/s] to [m/s] and store
+  xDot = float(deltaX) * zMeter;
+  yDot = float(deltaY) * zMeter;
 
   #ifdef DEBUG
-    Serial.print("DeltaX: ");
+    Serial.print("\nDeltaX: ");
     Serial.print(deltaX);
     Serial.print("  DeltaY: ");
-    Serial.println(deltaY);
+    Serial.print(deltaY);
   #endif
 }
 
@@ -446,13 +447,13 @@ void setup() {
   zCalibration = zMeter;
 
   // Initialize IMU (needs to happend in the end, to allow for continous IMU sampling)
-  imu.init();
+  // imu.init();
 
   // IMU calibration phase
   #ifndef DISABLE_COM
     transmitState(IMU_CALIBRATION, ackData);    // Transmit IMU calibration phase message
   #endif
-  imu.calibrate();
+  // imu.calibrate();
 
   // Filter warmup phase
   #ifndef DISABLE_COM
@@ -481,7 +482,7 @@ void setup() {
 
   // Allow the madgwick filter to start converging on an estimate before flight
   // (This needs to happen without other uninteruptions right before entering the loop)
-  imu.filterWarmup(t0IMU, t1IMU, imuSampleInv);
+  // imu.filterWarmup(t0IMU, t1IMU, imuSampleInv);
 
   #ifdef DEBUG
     Serial.println("Init complete!");
@@ -597,7 +598,7 @@ void loop() {
 
     // Read IMU
     // unsigned long t0Madg = micros();
-    imu.sample();
+    // imu.sample();
     // unsigned long t1Madg = micros();
 
     // Serial.print("\n IMU sample took: ");
@@ -612,27 +613,32 @@ void loop() {
 
   // ================ Attitude estimation ================
   // Madgwick iteration
-  imu.madgwickStep();
+  // imu.madgwickStep();
 
   // Preliminary, rough estimations of the missing states (xDot, yDot)
   // To-do (kalman estimator)
   //xDot = (imu.AccX + imu.AccX_prev) * imu.dt;
   //yDot = (imu.AccY + imu.AccY_prev) * imu.dt;
-  // Get aand set delta values for X and Y
-  getFlowData();
 
 
-  // Get lidar data (100 Hz)
+  // Get lidar and oprical flow data (100 Hz)
   if (t1Lidar - t0Lidar >= 10000) {
-    // unsigned long t0Lid = micros();
+    // ============= Lidar =============
     getLidar();
-    // unsigned long t1Lid = micros();
 
-    // Serial.print("\n Lidar sample took: ");
-    // Serial.print(t1Lid - t0Lid);
+    // ============= Optical flow =============
+    // Get and set delta values for X and Y
+    unsigned long t0Lid = micros();
+    getFlowData();
+    unsigned long t1Lid = micros();
+
+
+    Serial.print("\tOptical flow sample took: ");
+    Serial.print(t1Lid - t0Lid);
+    
+    // Reset timer
     t0Lidar = micros();
     t1Lidar = micros();
-
   }
   else {
     t1Lidar = micros();
@@ -647,12 +653,12 @@ void loop() {
   // =============== LQR control =================
   
   // Run control-update at predefined frequency
-  if (t1Lqr - t0Lqr >= controllerFrekvInv) {
+  if (t1Lqr - t0Lqr >= 10000) {//controllerFrekvInv) {
     // Get lidar data at the same frequency as the controller
     // getLidar();
 
     #ifdef DEBUG
-      Serial.print("\n z = ");
+      Serial.print("\nz = ");
       Serial.print(zMeter);
 
       Serial.print("\t");

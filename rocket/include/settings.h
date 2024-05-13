@@ -13,12 +13,12 @@
 // Enable / disable settings
 // =================================================================
 // Change debug mode | COMMENT OUT WHEN NO COMPUTER CONNECTED
-// #define DEBUG
+#define DEBUG
 #define DISABLE_COM
 #define TIME_LIMIT 10000
 #define LOOP_RATE
 // #define ROLLCONTROLLER
-#define MOTORS_SERVOS
+// #define MOTORS_SERVOS
 
 // =================================================================
 
@@ -46,8 +46,7 @@
 #define CSN_PIN 10  //10 teensy, 4 arduino uno (lighter color)
 
 // // ====== Optical Flow pin assignment ======
-#define OF_CS_PIN 0 //SPI1
-
+#define OF_CS_PIN 0 // SPI1
 
 
 // // =============================================================================================

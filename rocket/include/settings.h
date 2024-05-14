@@ -59,7 +59,7 @@
 // ====== Motor and servo constants ======
 // #define SPEED_PROCENT_LIMIT 100
 #define SPEED_LIMIT 1700                // Maximum allowed motor speed [us]
-#define SPEED_MIN 1100                  // Lowest allowed motor speed
+#define SPEED_MIN 1100                  // Pulse-width [us] equivalent to zero speed on the motors
 #define SERVO_1_HOME 55 //82;          // 0 position [degrees]
 #define SERVO_2_HOME 71 //107; // 88;  // 0 position[degrees]
 #define MAX_GIMBAL 30

@@ -81,6 +81,8 @@ float xGimb = 0;
 float yGimb = 0;
 float motorSpeed = 1140;
 
+// Variable storing yaw-angle at t0
+float yawZero = 0;
 
 // Timing variables
 unsigned long t0;
@@ -149,6 +151,26 @@ void getBarometer() {
   }
 } */
 
+
+void lidarCalibration() {
+  // Lidar calibration (measure offset to ground at standstill)
+  int lidarSum = 0;
+
+  for (int i=0; i < 100; i++) {
+    tfmP.getData(lidarZ);    // Get a frame of data from the TFmini
+    if(tfmP.status == TFMP_CHECKSUM){
+      lidarZ = tfmP.frame[ 2] + ( tfmP.frame[ 3] << 8);
+    }
+    lidarSum += lidarZ;
+    delay(10);
+  }
+
+  // Get avrage lidar sample from 100 samples and convert from cm to m
+  // (equivalent to dividing by 10 000)
+  zMeter = float(lidarSum) / 10000;
+  zCalibration = zMeter;
+}
+
 void getLidar() {
   float dtLidar = 0.01;//;(t1Lidar - t0Lidar) / 1000000;
   zPrev = zMeter;
@@ -172,9 +194,9 @@ void getLidar() {
   }
 
   // Get distance to ground (taking roll and pitch of the rocket into account)
-  // if (abs(imu.roll_IMU) < 80 && abs(imu.pitch_IMU) < 80) {
-  //   zMeter = sqrt(zMeter * zMeter * (1 - pow( sin(imu.roll_IMU), 2 ) - pow( sin(imu.pitch_IMU), 2 )) );
-  // }
+  if (abs(imu.roll_IMU) < 80 && abs(imu.pitch_IMU) < 80) {
+    zMeter = sqrt(zMeter * zMeter * abs(1 - pow( sin(imu.roll_IMU), 2 ) - pow( sin(imu.pitch_IMU), 2 )) );      // ToDo <<<<<<<<<<------------------ Verify that this works in all orientations
+  }
 
   // Preliminary, rough estimations of zDot
   // To-do (kalman estimator)
@@ -232,7 +254,7 @@ void initSD(){
 
   sdFile = filename;
 
-  // bufferSize = sizeof(senderData) * TIME_LIMIT / 10;                                 //<<<<<<<<<<<<<<-----------------Uncomment!!!
+  // bufferSize = sizeof(senderData) * TIME_LIMIT / 10;      // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
   Serial.println("Buffersize: " + String(bufferSize));
 }
 
@@ -425,7 +447,7 @@ void setup() {
   initOpticalFlow();
 
   // Initialize the SD card
-  // initSD();
+  // initSD();                    // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
 
 
   // =============== Sensor setup ===============
@@ -439,22 +461,16 @@ void setup() {
   Wire.begin();
   Wire.setClock(I2C_CLOCKSPEED);
 
-  // Lidar calibration (measure offset to ground at standstill)   <<<<--------------------------To do: Add calibration by avragin multiple samples
-  tfmP.getData(lidarZ);    // Get a frame of data from the TFmini
-  if(tfmP.status == TFMP_CHECKSUM){
-    lidarZ = tfmP.frame[ 2] + ( tfmP.frame[ 3] << 8);
-  }
-  zMeter = float(lidarZ) * 0.01;
-  zCalibration = zMeter;
+  lidarCalibration();
 
   // Initialize IMU (needs to happend in the end, to allow for continous IMU sampling)
-  // imu.init();
+  // imu.init();                                                                                // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
 
   // IMU calibration phase
   #ifndef DISABLE_COM
     transmitState(IMU_CALIBRATION, ackData);    // Transmit IMU calibration phase message
   #endif
-  // imu.calibrate();
+  // imu.calibrate();                                                                           // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
 
   // Filter warmup phase
   #ifndef DISABLE_COM
@@ -485,6 +501,9 @@ void setup() {
   // (This needs to happen without other uninteruptions right before entering the loop)
   // imu.filterWarmup(t0IMU, t1IMU, imuSampleInv);
 
+  // Store yaw (roll) value at t0 for roll control
+  yawZero = imu.yaw_IMU;
+  
   #ifdef DEBUG
     Serial.println("Init complete!");
   #endif
@@ -514,8 +533,8 @@ void setup() {
   t0Lqr = micros();
   t1Lqr = micros();
 
-  // t0Lidar = micros();
-  // t1Lidar = micros();
+  t0Lidar = micros();
+  t1Lidar = micros();
 
   tCheck0 = micros();
   tCheck1 = micros();
@@ -556,7 +575,7 @@ void loop() {
     // Do nothing until the teensy is reset
     delay(1000000);
 
-    // Infinite loop with do nothing (arduino can't do exit(0) since the loop() is infinite)
+    // Infinite loop with do nothing (arduino can't do exit(0) since the loop() is infinite and the highest level)
     while(1) {}    
   }
   else {
@@ -581,7 +600,7 @@ void loop() {
       // Do nothing until the teensy is reset
       delay(1000000);
 
-      // Infinite loop with do nothing (arduino can't do exit(0) since the loop() is infinite)
+      // Infinite loop with do nothing (arduino can't do exit(0) since the loop() is infinite and the highest level)
       while(1) {}    
     }
   #endif
@@ -599,7 +618,7 @@ void loop() {
 
     // Read IMU
     // unsigned long t0Madg = micros();
-    // imu.sample();
+    // imu.sample();                                      // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
     // unsigned long t1Madg = micros();
 
     // Serial.print("\n IMU sample took: ");
@@ -614,7 +633,7 @@ void loop() {
 
   // ================ Attitude estimation ================
   // Madgwick iteration
-  // imu.madgwickStep();
+  // imu.madgwickStep();                                              // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
 
   // Preliminary, rough estimations of the missing states (xDot, yDot)
   // To-do (kalman estimator)
@@ -694,6 +713,7 @@ void loop() {
     lqr(xDot, imu.roll_IMU, imu.GyroX, yDot, imu.pitch_IMU, imu.GyroY, zMeter, zDot, currentTime, lqrSignals);
     xGimb = lqrSignals.gimb1;
     yGimb = lqrSignals.gimb2;
+    motorSpeed = lqrSignals.motor2Speed;
     
     #ifdef DEBUG
       // Serial.print("  g1: ");
@@ -713,13 +733,16 @@ void loop() {
       
     #endif
 
-    motorsWrite(1, lqrSignals.motor1Speed, ackData);
+    // Write speed to the upper motor
+    motorsWrite(2, lqrSignals.motor2Speed, ackData);
+
+    // Write speed to the lower motor
     #ifdef ROLLCONTROLLER
-      motorsWrite(2, roll_p_controller(imu.yaw_IMU, lqrSignals.motor2Speed), ackData);
+      motorsWrite(1, roll_p_controller(yawZero, imu.yaw_IMU, lqrSignals.motor2Speed), ackData);
     #endif
 
     #ifndef ROLLCONTROLLER
-      motorsWrite(2, lqrSignals.motor1Speed, ackData);
+      motorsWrite(1, lqrSignals.motor1Speed, ackData);
     #endif
 
     setServo1Pos(-xGimb);

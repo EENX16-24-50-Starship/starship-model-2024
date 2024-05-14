@@ -199,6 +199,7 @@ void lqr(float x_dot, float gamma1, float gamma1_dot, float y_dot, float gamma2,
     }
 
     lqrSignals.motor1Speed = pwm;
+    lqrSignals.motor2Speed = pwm;
     // lqrSignals.gimb1 = float(U(1)) * float((180 / M_PI));
     // lqrSignals.gimb2 = float(U(2)) * float((180 / M_PI));
     lqrSignals.gimb1 = float(U(1));

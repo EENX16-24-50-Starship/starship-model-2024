@@ -27,6 +27,7 @@
 #include <SD.h>
 #include "RollControl.h"
 #include <Bitcraze_PMW3901.h>
+#include <opticalFlow.h>
 
 
 
@@ -318,9 +319,15 @@ void getFlowData(){
   
   /* Get delta values from PMW3901 */
   pmw3901.readMotionCount(&deltaX, &deltaY);
-  
+
+	uint64_t dt_flow = 0.01;
+
+  // [Pixel/sample] to [rad/s]
+	deltaX = ((float)deltaX / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
+	deltaY = ((float)deltaX / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
+
   // Convert from [rad/s] to [m/s] and store
-  zMeter = 1.0;
+  zMeter = 1.0;                                                                       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -------------------------------------------------- Remove before flight
   xDot = float(deltaX) * zMeter;
   yDot = float(deltaY) * zMeter;
 

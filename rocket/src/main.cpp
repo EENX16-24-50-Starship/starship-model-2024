@@ -315,27 +315,30 @@ void initOpticalFlow(){
 }
 
 void getFlowData(){
+  // Variables to hold raw flow samples from the registers
   int16_t deltaX, deltaY;
   
   /* Get delta values from PMW3901 */
   pmw3901.readMotionCount(&deltaX, &deltaY);
 
-	uint64_t dt_flow = 0.01;
+  // Variables to hold flow-values during conversion
+  float dX = 0;
+  float dY = 0;
 
   // [Pixel/sample] to [rad/s]
-	deltaX = ((float)deltaX / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
-	deltaY = ((float)deltaX / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
+	dX = (float(deltaX) / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
+	dY = (float(deltaY) / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
 
   // Convert from [rad/s] to [m/s] and store
-  zMeter = 1.0;                                                                       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -------------------------------------------------- Remove before flight
-  xDot = float(deltaX) * zMeter;
-  yDot = float(deltaY) * zMeter;
+  zMeter = 1.0f;                                                                       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -------------------------------------------------- Remove before flight
+  xDot = dX * zMeter;
+  yDot = dY * zMeter;
 
   #ifdef DEBUG
     Serial.print("\nxDot: ");
-    Serial.print(xDot);
+    Serial.print(xDot, 4);
     Serial.print("\tyDot: ");
-    Serial.print(yDot);
+    Serial.print(yDot, 4);
   #endif
 }
 

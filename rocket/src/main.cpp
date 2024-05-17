@@ -107,6 +107,13 @@ float xDot = 0;
 float yDot = 0;
 float zDot = 0;
 
+// Optical flow sepcific variables
+  // Track attitude estimation for gyro compensation in flow reading (rad / s)
+  float flowRollPrev;
+  float flowRoll;
+  float flowPitchPrev;
+  float flowPitch;
+
 // ======== SD Card =========
 // SD file
 String sdFile = "";
@@ -314,7 +321,13 @@ void initOpticalFlow(){
   }
 }
 
-void getFlowData(){
+void getFlowData(float roll, float pitch){
+  // Track attitude estimation for gyro compensation in flow reading (rad / s)
+  flowRollPrev = flowRoll;
+  flowRoll = roll * (PI/180);
+  flowPitchPrev = flowPitch;
+  flowPitch = pitch * (PI/180);
+
   // Variables to hold raw flow samples from the registers
   int16_t deltaX, deltaY;
   
@@ -328,6 +341,20 @@ void getFlowData(){
   // [Pixel/sample] to [rad/s]
 	dX = (float(deltaX) / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
 	dY = (float(deltaY) / 385.0f) / 0.01;		// proportional factor + convert from pixels to radians
+
+  // To do: Gyro compensation
+  /* ========================
+  * Subtract the part of the optical flow caused by roll or pitch
+  * This requires keeping track of the gyro samples in rad / s and keeping track of the delta T 
+  * (This will be less noisy then using raw IMU data in my opinion, hopefully)
+  /* ======================== */
+
+  // Compensate for body motion to give a LOS rate
+  // _flow_compensated_XY_rad = _flow_sample_delayed.flow_xy_rad - _flow_sample_delayed.gyro_xyz.xy();
+  
+  // Rotation around the y-axis effects the xDot-reading and vice versa
+  dX = dX - (flowPitch - flowPitchPrev) * 0.01;
+  dY = dY - (flowRoll - flowRollPrev) * 0.01;
 
   // Convert from [rad/s] to [m/s] and store
   zMeter = 1.0f;                                                                       // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< -------------------------------------------------- Remove before flight
@@ -659,7 +686,7 @@ void loop() {
     // ============= Optical flow =============
     // Get and set delta values for X and Y
     unsigned long t0Lid = micros();
-    getFlowData();
+    getFlowData(imu.roll_IMU, imu.pitch_IMU);
     unsigned long t1Lid = micros();
 
 

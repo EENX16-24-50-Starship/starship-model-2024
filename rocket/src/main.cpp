@@ -500,20 +500,6 @@ void setup() {
 
   lidarCalibration();
 
-  // Initialize IMU (needs to happend in the end, to allow for continous IMU sampling)
-  // imu.init();                                                                                // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
-
-  // IMU calibration phase
-  #ifndef DISABLE_COM
-    transmitState(IMU_CALIBRATION, ackData);    // Transmit IMU calibration phase message
-  #endif
-  // imu.calibrate();                                                                           // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
-
-  // Filter warmup phase
-  #ifndef DISABLE_COM
-    transmitState(FILTER_WARMUP, ackData);    // Transmit filter warmup phase message
-  #endif
-
   // // Barometer sensor setup
   // if(!initDPS310()){
   //   #ifdef DEBUG
@@ -533,6 +519,27 @@ void setup() {
 
   // Init lqr singal struct
   lqrSignals = {0.0, 0.0, 0, 0, 0.0, 0.0};
+
+  // Flow variable init
+  flowRollPrev = 0;
+  flowRoll = 0;
+  flowPitchPrev = 0;
+  flowPitch = 0;
+
+
+  // Initialize IMU (needs to happend in the end, to allow for continous IMU sampling)
+  // imu.init();                                                                                // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
+
+  // IMU calibration phase
+  #ifndef DISABLE_COM
+    transmitState(IMU_CALIBRATION, ackData);    // Transmit IMU calibration phase message
+  #endif
+  // imu.calibrate();                                                                           // <<<<<<<<<<<<<<------------------------------------------------------------------- Uncomment!!!
+
+  // Filter warmup phase
+  #ifndef DISABLE_COM
+    transmitState(FILTER_WARMUP, ackData);    // Transmit filter warmup phase message
+  #endif
 
   // Allow the madgwick filter to start converging on an estimate before flight
   // (This needs to happen without other uninteruptions right before entering the loop)

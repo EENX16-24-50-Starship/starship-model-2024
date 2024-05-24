@@ -46,7 +46,7 @@
 #define CSN_PIN 10  //10 teensy, 4 arduino uno (lighter color)
 
 // // ====== Optical Flow pin assignment ======
-#define OF_CS_PIN 13 // SPI1
+#define OF_CS_PIN 9 // SPI0
 
 
 // // =============================================================================================

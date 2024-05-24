@@ -681,8 +681,8 @@ void loop() {
 
   // Preliminary, rough estimations of the missing states (xDot, yDot)
   // To-do (kalman estimator)
-  //xDot = (imu.AccX + imu.AccX_prev) * imu.dt;
-  //yDot = (imu.AccY + imu.AccY_prev) * imu.dt;
+  // xDot = (imu.AccX + imu.AccX_prev) * imu.dt;
+  // yDot = (imu.AccY + imu.AccY_prev) * imu.dt;
 
 
   // Get lidar and oprical flow data (100 Hz)

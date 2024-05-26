@@ -1,6 +1,6 @@
 # Starship model Project 2024
 
-This project is part of a bachelor theisis on Chalmers Technical University.
+This project is part of a bachelor theisis at Chalmers University of Technology, department of electrical engineering.
 
 The project involves programming a Teensy 4.1 microcontroller using PlatformIO in Visual Studio Code.
 

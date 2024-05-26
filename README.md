@@ -3,9 +3,7 @@
 Modelling and control of an electric reusable rocket
 ----------------------------------------------------
 
-This project is part of a bachelor theisis at Chalmers University of Technology, department of electrical engineering.
-
-Full report: <a href="Bachelor_thesis_EENX16_24_50 Starship.pdf" class="image fit"><img src="images/marr_pic.jpg" alt=""></a>
+This project is part of a bachelor theisis [Full report](/Bachelor_thesis_EENX16_24_50_Starship.pdf) at Chalmers University of Technology, department of electrical engineering.
 
 It is a continuation of a previous bachlor thesis from 2023, with the goal of buidling a propeller driven rocket model, immitating the control of Space X starship seconds stage.
 
